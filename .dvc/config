@@ -1,0 +1,4 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = /Users/rajatbhat/RajatPersonal/NSL/Campusx/MLOps/data-storage/newremote
