@@ -12,7 +12,7 @@ import os
 
 
 # Set up MLflow tracking URI
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
 
 # logging configuration
 logger = logging.getLogger('model_evaluation')
