@@ -43,3 +43,11 @@ jobs:
         env:
           MLFLOW_TRACKING_URI: http://localhost:5000
         run: python -m unittest tests/test_fastapi.py
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
