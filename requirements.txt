@@ -5,3 +5,6 @@ pyyaml
 nltk
 dvc
 mlflow
+fastapi
+uvicorn
+pydantic

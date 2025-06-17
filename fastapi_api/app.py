@@ -9,10 +9,12 @@ import pandas as pd
 import os
 import re
 import nltk
+import mlflow
 import string
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
 
 app = FastAPI()
 
@@ -73,8 +75,23 @@ def normalize_text(text):
 
     return text
 
+def get_latest_model_version(model_name, stage="Staging"):
+    client = mlflow.MlflowClient()
+    latest_version = client.get_latest_versions(model_name)
+    return latest_version[0].version if latest_version else None
+
+def load_model():
+    new_model_name = "my_model"
+    new_model_version = get_latest_model_version(new_model_name)
+    new_model_uri = f'models:/{new_model_name}/{new_model_version}'
+    new_model = mlflow.sklearn.load_model(new_model_uri)
+
+    return new_model
+
 vectorizer = pickle.load(open('models/vectorizer.pkl','rb'))
-model = pickle.load(open('models/model.pkl','rb'))
+
+model = load_model()
+
 
 @app.get('/')
 def home():
