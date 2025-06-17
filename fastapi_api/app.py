@@ -114,5 +114,5 @@ def predict(data:UserInput):
     # prediction
     result = model.predict(features_df)
 
-    return {"data":"sadness" if str(result[0]) == "0" else "happiness"}
+    return {"sentiment":"sadness" if str(result[0]) == "0" else "happiness"}
 
