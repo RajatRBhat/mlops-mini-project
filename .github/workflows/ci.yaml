@@ -31,3 +31,9 @@ jobs:
           MLFLOW_TRACKING_URI: http://localhost:5000
         run: |
           dvc repro
+
+      - name: Run model tests
+        env:
+          MLFLOW_TRACKING_URI: http://localhost:5000
+        run: |
+          python -m unittest tests/test_model.py
