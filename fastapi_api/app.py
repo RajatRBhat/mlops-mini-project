@@ -14,8 +14,6 @@ import string
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-
 app = FastAPI()
 
 class UserInput(BaseModel):
@@ -76,6 +74,7 @@ def normalize_text(text):
     return text
 
 def get_latest_model_version(model_name, stage="Staging"):
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
     client = mlflow.MlflowClient()
     latest_version = client.get_latest_versions(model_name)
     return latest_version[0].version if latest_version else None
@@ -90,7 +89,8 @@ def load_model():
 
 vectorizer = pickle.load(open('models/vectorizer.pkl','rb'))
 
-model = load_model()
+#model = load_model()
+model = pickle.load(open('models/model.pkl','rb'))
 
 
 @app.get('/')
