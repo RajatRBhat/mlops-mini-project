@@ -1,8 +1,7 @@
-pandas
-numpy
-scikit-learn
-fastapi
-uvicorn
-pydantic
-mlflow
-nltk
+fastapi==0.115.12
+uvicorn==0.34.3
+scikit-learn==1.7.0
+pandas==2.3.0
+numpy==2.3.0
+pydantic==2.11.6
+nltk==3.9.1

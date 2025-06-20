@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
 
+import logging
 import pickle
 import pandas as pd
 
@@ -9,12 +10,15 @@ import pandas as pd
 import os
 import re
 import nltk
-import mlflow
 import string
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
+
 
 class UserInput(BaseModel):
     user_query : str
@@ -65,54 +69,73 @@ def remove_small_sentences(df):
 
 def normalize_text(text):
     text = lower_case(text)
-    text = remove_stop_words(text)
-    text = removing_numbers(text)
-    text = removing_punctuations(text)
-    text = removing_urls(text)
-    text = lemmatization(text)
+    #text = remove_stop_words(text)
+    #text = removing_numbers(text)
+    #text = removing_punctuations(text)
+    #text = removing_urls(text)
+    #text = lemmatization(text)
 
     return text
 
-def get_latest_model_version(model_name, stage="Staging"):
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-    client = mlflow.MlflowClient()
-    latest_version = client.get_latest_versions(model_name)
-    return latest_version[0].version if latest_version else None
+# def get_latest_model_version(model_name, stage="Staging"):
+#     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+#     client = mlflow.MlflowClient()
+#     latest_version = client.get_latest_versions(model_name)
+#     return latest_version[0].version if latest_version else None
 
-def load_model():
-    new_model_name = "my_model"
-    new_model_version = get_latest_model_version(new_model_name)
-    new_model_uri = f'models:/{new_model_name}/{new_model_version}'
-    new_model = mlflow.sklearn.load_model(new_model_uri)
+# def load_model():
+#     new_model_name = "my_model"
+#     new_model_version = get_latest_model_version(new_model_name)
+#     new_model_uri = f'models:/{new_model_name}/{new_model_version}'
+#     new_model = mlflow.sklearn.load_model(new_model_uri)
 
-    return new_model
+#     return new_model
 
 vectorizer = pickle.load(open('models/vectorizer.pkl','rb'))
 
 #model = load_model()
 model = pickle.load(open('models/model.pkl','rb'))
 
+try:
+    logger.debug("Loading vectorizer")
+    vectorizer = pickle.load(open('models/vectorizer.pkl', 'rb'))
+    logger.debug("Loading model")
+    model = pickle.load(open('models/model.pkl', 'rb'))
+    logger.debug("Model and vectorizer loaded")
+except Exception as e:
+    logger.error(f"Error loading model/vectorizer: {e}")
+    raise
+
 
 @app.get('/')
 def home():
+    logger.debug("Home endpoint called")
     return "Hello"
 
 @app.post('/predict')
 def predict(data:UserInput):
-    text = data.user_query
+    try:
+        text = data.user_query
+        logger.info(f"Before normalizing {text}")
 
-    # clean
-    text = normalize_text(text)
+        # clean
+        text = normalize_text(text)
+        logger.info(f"After normalizing {text}")
 
-    # bow
-    features = vectorizer.transform([text])
+        # bow
+        features = vectorizer.transform([text])
+        logger.info(f"Features{features.shape}")
 
-    # Convert sparse matrix to DataFrame
-    features_df = pd.DataFrame.sparse.from_spmatrix(features)
-    features_df = pd.DataFrame(features.toarray(), columns=[str(i) for i in range(features.shape[1])])
+        # Convert sparse matrix to DataFrame
+        features_df = pd.DataFrame.sparse.from_spmatrix(features)
+        features_df = pd.DataFrame(features.toarray(), columns=[str(i) for i in range(features.shape[1])])
+        logger.info(f"before prediction")
+        # prediction
+        result = model.predict(features_df)
+        logger.info(f"Result{result}")
 
-    # prediction
-    result = model.predict(features_df)
-
-    return {"sentiment":"sadness" if str(result[0]) == "0" else "happiness"}
+        return {"sentiment":"sadness" if str(result[0]) == "0" else "happiness"}
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
