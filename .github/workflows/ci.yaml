@@ -69,3 +69,20 @@ jobs:
       - name: Push Docker image to AWS ECR
         run: |
           docker push 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
+
+      - name: Deploy to EC2
+        if: success()
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws configure set default.region us-east-1
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 734359156280.dkr.ecr.us-east-1.amazonaws.com
+            docker pull 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
+            docker stop rrb-app || true
+            docker rm rrb-app || true
+            docker run -d -p 8000:8000 --name rrb-app 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
