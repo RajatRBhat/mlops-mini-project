@@ -83,6 +83,6 @@ jobs:
             aws configure set default.region us-east-1
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 734359156280.dkr.ecr.us-east-1.amazonaws.com
             docker pull 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
-            docker stop rrb-app || true
-            docker rm rrb-app || true
-            docker run -d -p 8000:8000 --name rrb-app 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
+            docker stop rrb-app1 || true
+            docker rm rrb-app1 || true
+            docker run -d -p 8000:8000 --name rrb-app1 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
