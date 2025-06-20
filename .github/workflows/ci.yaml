@@ -52,7 +52,20 @@ jobs:
           MLFLOW_TRACKING_URI: http://localhost:5000
         run: python -m unittest tests/test_fastapi.py
 
-      - name: Build Docker image
-        if: success()
+      - name: Login to AWS ECR
         run: |
-          docker build -t rrb_mlops .
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 734359156280.dkr.ecr.us-east-1.amazonaws.com
+
+      - name: Build Docker image
+        run: |
+          docker build -t rrbecr .
+
+      - name: Tag Docker image
+        run: |
+          docker tag rrbecr:latest 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
+
+      - name: Push Docker image to AWS ECR
+        run: |
+          docker push 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
