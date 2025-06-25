@@ -70,19 +70,28 @@ jobs:
         run: |
           docker push 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
 
-      - name: Deploy to EC2
+      # Zip the required files
+      - name: Zip files for deployment
         if: success()
-        uses: appleboy/ssh-action@v0.1.5
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws configure set default.region us-east-1
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 734359156280.dkr.ecr.us-east-1.amazonaws.com
-            docker pull 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
-            docker stop rrb-app1 || true
-            docker rm rrb-app1 || true
-            docker run -d -p 8000:8000 --name rrb-app1 734359156280.dkr.ecr.us-east-1.amazonaws.com/rrbecr:latest
+        run: |
+          zip -r deployment.zip appspec.yml deploy/scripts/install_dependencies.sh deploy/scripts/start_docker.sh
+
+      # Upload the ZIP file to S3
+      - name: Upload ZIP to S3
+        if: success()
+        run: |
+          aws s3 cp deployment.zip s3://rrbcodedeploybucket/deployment.zip
+
+      # Deploy to AWS CodeDeploy using the uploaded ZIP file
+      - name: Deploy to AWS CodeDeploy
+        if: success()
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws deploy create-deployment \
+            --application-name rrb-ml-app \
+            --deployment-config-name CodeDeployDefault.OneAtATime \
+            --deployment-group-name rrb-ml-dgp \
+            --s3-location bucket=rrbcodedeploybucket,key=deployment.zip,bundleType=zip \
+            --file-exists-behavior OVERWRITE \
+            --region us-east-1
